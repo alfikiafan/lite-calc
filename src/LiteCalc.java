@@ -19,7 +19,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     private static final int FRAME_HEIGHT = 400;
     private static final int DISPLAY_HEIGHT = 84;
 
-    private static final Font DISPLAY_FONT = new Font("Segoe UI", Font.PLAIN, 36);
+    private static final Font DISPLAY_FONT = new Font("Segoe UI SemiBold", Font.PLAIN, 36);
     private static final Font BUTTON_FONT = new Font("Segoe UI", Font.PLAIN, 18);
     private static final Font BACKSPACE_FONT = new Font("Segoe UI Regular", Font.PLAIN, 18);
     private static final Font DIVIDE_BY_ZERO_FONT = new Font("Segoe UI", Font.PLAIN, 24);
@@ -144,7 +144,7 @@ public class LiteCalc extends JFrame implements KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        handleKeyPress(e.getKeyChar(), e.getKeyCode());
+        handleKeyPress(e.getKeyChar());
     }
 
     @Override
@@ -153,11 +153,11 @@ public class LiteCalc extends JFrame implements KeyListener {
     }
 
     // Metode untuk menangani penekanan tombol pada keyboard
-    private void handleKeyPress(char keyChar, int keyCode) {
+    private void handleKeyPress(char keyChar) {
         String keyText = String.valueOf(keyChar);
 
         // Cek apakah karakter adalah digit, operator, atau karakter khusus lainnya
-        if (Character.isDigit(keyChar) || "+-*/".indexOf(keyChar) != -1) {
+        if (Character.isDigit(keyChar) || "+-".indexOf(keyChar) != -1) {
             processButtonAction(keyText);
         } else if (keyChar == '\b') {
             removeLastCharacter();
@@ -167,10 +167,15 @@ public class LiteCalc extends JFrame implements KeyListener {
             processOperator("%");
         } else if (keyChar == '.') {
             appendToDisplay(keyText);
-        } else if (keyCode == KeyEvent.VK_DELETE ) {
+        } else if (keyChar == '\u007F') {
             clearDisplay();
+        } else if (keyChar == '/' || keyChar == '\\') {
+            processOperator("÷");
+        } else if (keyChar == '*') {
+            processOperator("×");
         }
     }
+
     private void processButtonAction(String buttonText) {
         if (!currentInput.toString().equals(DIVIDE_BY_ZERO_STRING)) {
             display.setFont(DISPLAY_FONT);
@@ -304,11 +309,7 @@ public class LiteCalc extends JFrame implements KeyListener {
                 if (result != null) {
                     display.setText(result.stripTrailingZeros().toPlainString());
                     currentInput.setLength(0);
-
-                    // Set hasil perhitungan ke currentInput
                     currentInput.append(result.stripTrailingZeros().toPlainString());
-
-                    // Reset operator
                     currentOperator = null;
                 }
             }
