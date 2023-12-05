@@ -24,6 +24,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     private static final Font BACKSPACE_FONT = new Font("Segoe UI Regular", Font.PLAIN, 18);
     private static final Font DIVIDE_BY_ZERO_FONT = new Font("Segoe UI", Font.PLAIN, 24);
     private static final String DIVIDE_BY_ZERO_STRING = "Cannot divide by zero";
+    private boolean resultDisplayed = false;
 
     public LiteCalc() {
         setTitle("LiteCalc");
@@ -89,7 +90,11 @@ public class LiteCalc extends JFrame implements KeyListener {
         add(panel, gbc);
 
         for (JButton button : buttons) {
-            button.addActionListener(e -> processButtonAction(button.getText()));
+            button.addActionListener(e -> {
+                processButtonAction(button.getText());
+                LiteCalc.this.requestFocusInWindow();
+            });
+            button.setFocusable(true);
         }
 
         currentInput = new StringBuilder();
@@ -117,6 +122,10 @@ public class LiteCalc extends JFrame implements KeyListener {
     }
 
     private void appendToDisplay(String text) {
+        if (resultDisplayed) {
+            currentInput.setLength(0);
+            resultDisplayed = false;
+        }
         if (text.equals(".") && currentInput.isEmpty()) {
             currentInput.append("0");
         } else if (text.equals(".") && !currentInput.isEmpty()) {
@@ -131,6 +140,10 @@ public class LiteCalc extends JFrame implements KeyListener {
         // Handle the case where the first digit is 0
         if (currentInput.toString().equals("0") && Character.isDigit(text.charAt(0))) {
             currentInput.setLength(0);
+        }
+        // if user enter zero right after operator, then user enter another digit, remove the zero
+        if (currentInput.length() > 1 && !Character.isDigit(currentInput.charAt(currentInput.length() - 2)) && currentInput.charAt(currentInput.length() - 1) == '0' && Character.isDigit(text.charAt(0))) {
+            currentInput.deleteCharAt(currentInput.length() - 1);
         }
 
         currentInput.append(text);
@@ -165,14 +178,16 @@ public class LiteCalc extends JFrame implements KeyListener {
             calculateResult();
         } else if (keyChar == '%') {
             processOperator("%");
-        } else if (keyChar == '.') {
-            appendToDisplay(keyText);
+        } else if (keyChar == '.' || keyChar == ',') {
+            appendToDisplay(".");
         } else if (keyChar == '\u007F') {
             clearDisplay();
         } else if (keyChar == '/' || keyChar == '\\') {
             processOperator("÷");
         } else if (keyChar == '*') {
             processOperator("×");
+        } else if (keyChar == 't' || keyChar == 'T') {
+            toggleSign();
         }
     }
 
@@ -196,6 +211,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     }
 
     private void processOperator(String op) {
+        resultDisplayed = false;
         if (currentInput.isEmpty()) {
             if (op.equals(".")) {
                 appendToDisplay("0.");
@@ -244,6 +260,7 @@ public class LiteCalc extends JFrame implements KeyListener {
                     currentInput.deleteCharAt(lastIndex);
                     lastIndex--;
                 }
+                currentOperator = null;
             }
             display.setText(currentInput.toString());
         }
@@ -311,6 +328,7 @@ public class LiteCalc extends JFrame implements KeyListener {
                     currentInput.setLength(0);
                     currentInput.append(result.stripTrailingZeros().toPlainString());
                     currentOperator = null;
+                    resultDisplayed = true;
                 }
             }
         }
@@ -341,6 +359,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     private void clearDisplay() {
         currentInput.setLength(0);
         currentOperator = null;
+        resultDisplayed = false;
         display.setText("0");
     }
 
@@ -360,6 +379,7 @@ public class LiteCalc extends JFrame implements KeyListener {
         SwingUtilities.invokeLater(() -> {
             LiteCalc liteCalc = new LiteCalc();
             liteCalc.setVisible(true);
+            liteCalc.requestFocus();
         });
     }
 }
