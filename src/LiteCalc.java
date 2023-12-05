@@ -24,7 +24,9 @@ public class LiteCalc extends JFrame implements KeyListener {
     private static final Font BACKSPACE_FONT = new Font("Segoe UI Regular", Font.PLAIN, 18);
     private static final Font DIVIDE_BY_ZERO_FONT = new Font("Segoe UI", Font.PLAIN, 24);
     private static final String DIVIDE_BY_ZERO_STRING = "Cannot divide by zero";
-    private boolean resultDisplayed = false;
+    private static final int BUTTONS_PER_ROW = 4;
+
+    private boolean equalsButtonClicked = false;
 
     public LiteCalc() {
         setTitle("LiteCalc");
@@ -58,7 +60,7 @@ public class LiteCalc extends JFrame implements KeyListener {
         display.setText("0");
         panel.add(display, BorderLayout.NORTH);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(0, 4, 5, 2));
+        JPanel buttonPanel = new JPanel(new GridLayout(0, 4, 3, 3));
         buttonPanel.setBackground(BACKGROUND_COLOR);
 
         String[] buttonLabels = {
@@ -71,19 +73,16 @@ public class LiteCalc extends JFrame implements KeyListener {
 
         JButton[] buttons = new JButton[buttonLabels.length];
 
-        int row = 0; // Inisialisasi baris saat ini
+        // Inisialisasi baris saat ini
 
         for (int i = 0; i < buttonLabels.length; i++) {
             buttons[i] = createButton(buttonLabels[i]);
 
-            // Atur bobot berbeda pada setiap baris
-            gbc.gridy = row;
+            // Adjust row based on the threshold
+            gbc.gridy = i / BUTTONS_PER_ROW;
             buttonPanel.add(buttons[i], gbc);
-
-            if (i == 3 || i == 7 || i == 11 || i == 15 || i == 18) {
-                row++; // Pindah ke baris berikutnya setelah 4 tombol
-            }
         }
+
 
         panel.add(buttonPanel, BorderLayout.CENTER);
 
@@ -122,9 +121,9 @@ public class LiteCalc extends JFrame implements KeyListener {
     }
 
     private void appendToDisplay(String text) {
-        if (resultDisplayed) {
+        if (equalsButtonClicked) {
             currentInput.setLength(0);
-            resultDisplayed = false;
+            equalsButtonClicked = false;
         }
         if (text.equals(".") && currentInput.isEmpty()) {
             currentInput.append("0");
@@ -170,12 +169,13 @@ public class LiteCalc extends JFrame implements KeyListener {
         String keyText = String.valueOf(keyChar);
 
         // Cek apakah karakter adalah digit, operator, atau karakter khusus lainnya
-        if (Character.isDigit(keyChar) || "+-".indexOf(keyChar) != -1) {
+        if (Character.isDigit(keyChar) || "+".indexOf(keyChar) != -1) {
             processButtonAction(keyText);
         } else if (keyChar == '\b') {
             removeLastCharacter();
         } else if (keyChar == '\n' || keyChar == '=') {
             calculateResult();
+            equalsButtonClicked = true;
         } else if (keyChar == '%') {
             processOperator("%");
         } else if (keyChar == '.' || keyChar == ',') {
@@ -186,6 +186,8 @@ public class LiteCalc extends JFrame implements KeyListener {
             processOperator("÷");
         } else if (keyChar == '*') {
             processOperator("×");
+        } else if (keyChar == '-') {
+            processOperator("-");
         } else if (keyChar == 't' || keyChar == 'T') {
             toggleSign();
         }
@@ -205,13 +207,14 @@ public class LiteCalc extends JFrame implements KeyListener {
             appendToDisplay(buttonText);
         } else if (buttonText.equals("=")) {
             calculateResult();
+            equalsButtonClicked = true;
         } else {
             processOperator(buttonText);
         }
     }
 
     private void processOperator(String op) {
-        resultDisplayed = false;
+        equalsButtonClicked = false;
         if (currentInput.isEmpty()) {
             if (op.equals(".")) {
                 appendToDisplay("0.");
@@ -243,11 +246,32 @@ public class LiteCalc extends JFrame implements KeyListener {
         }
         display.setText(currentInput.toString());
     }
+    private void handleDivideByZero() {
+        clearDisplay();
+        display.setFont(DIVIDE_BY_ZERO_FONT);
+        display.setText(DIVIDE_BY_ZERO_STRING);
+        System.err.println("Error: Division by zero.");
+    }
 
     private void removeLastCharacter() {
+        if (currentInput.length() == 2 && currentInput.charAt(0) == '-') {
+            currentInput.setLength(0);
+            currentInput.insert(0, '0');
+            currentInput.append("0");
+        }
+
+        // Jika panjang input adalah 1, set input ke 0
+        if (currentInput.length() == 1) {
+            currentInput.setLength(0);
+            currentInput.insert(0, '0');
+            currentInput.append("0");
+        }
+
+        // if the last character is the result of division by zero, clear the display
         if (display.getText().equals(DIVIDE_BY_ZERO_STRING)) {
             clearDisplay();
         }
+
         if (!currentInput.isEmpty()) {
             int lastIndex = currentInput.length() - 1;
 
@@ -324,33 +348,34 @@ public class LiteCalc extends JFrame implements KeyListener {
                 BigDecimal result = performOperation(num1, num2, operator);
 
                 if (result != null) {
-                    display.setText(result.stripTrailingZeros().toPlainString());
-                    currentInput.setLength(0);
-                    currentInput.append(result.stripTrailingZeros().toPlainString());
-                    currentOperator = null;
-                    resultDisplayed = true;
+                    resultHandler(result);
                 }
             }
         }
     }
 
+    private void resultHandler(BigDecimal result) {
+        display.setText(result.stripTrailingZeros().toPlainString());
+        currentInput.setLength(0);
+        currentInput.append(result.stripTrailingZeros().toPlainString());
+        currentOperator = null;
+    }
+
     private BigDecimal performOperation(BigDecimal num1, BigDecimal num2, String op) {
         switch (op) {
+            case "÷":
+                if (!num2.equals(BigDecimal.ZERO)) {
+                    return num1.divide(num2, 10, RoundingMode.HALF_UP);
+                } else {
+                    handleDivideByZero();
+                    return null;
+                }
             case "+":
                 return num1.add(num2);
             case "-":
                 return num1.subtract(num2);
             case "×":
                 return num1.multiply(num2);
-            case "÷":
-                if (!num2.equals(BigDecimal.ZERO)) {
-                    return num1.divide(num2, 10, RoundingMode.HALF_UP);
-                } else {
-                    display.setFont(DIVIDE_BY_ZERO_FONT);
-                    display.setText(DIVIDE_BY_ZERO_STRING);
-                    currentInput.setLength(0);
-                    return null;
-                }
             default:
                 return BigDecimal.ZERO;
         }
@@ -359,7 +384,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     private void clearDisplay() {
         currentInput.setLength(0);
         currentOperator = null;
-        resultDisplayed = false;
+        equalsButtonClicked = false;
         display.setText("0");
     }
 
@@ -368,10 +393,7 @@ public class LiteCalc extends JFrame implements KeyListener {
             BigDecimal number = new BigDecimal(currentInput.toString());
             BigDecimal result = number.divide(BigDecimal.valueOf(100.0), 10, RoundingMode.HALF_UP);
 
-            display.setText(result.stripTrailingZeros().toPlainString());
-            currentInput.setLength(0);
-            currentInput.append(result.stripTrailingZeros().toPlainString());
-            currentOperator = null;
+            resultHandler(result);
         }
     }
 
