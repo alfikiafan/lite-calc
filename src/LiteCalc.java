@@ -4,6 +4,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LiteCalc extends JFrame implements KeyListener {
     private JTextField display;
@@ -24,6 +26,8 @@ public class LiteCalc extends JFrame implements KeyListener {
     private static final Font BACKSPACE_FONT = new Font("Segoe UI Regular", Font.PLAIN, 18);
     private static final Font DIVIDE_BY_ZERO_FONT = new Font("Segoe UI", Font.PLAIN, 24);
     private static final String DIVIDE_BY_ZERO_STRING = "Cannot divide by zero";
+    private static final String DIVIDE_BY_ZERO_LINE = "([-+]?\\d*\\.?\\d+)\\s*÷\\s*0";
+
     private static final int BUTTONS_PER_ROW = 4;
 
     private boolean equalsButtonClicked = false;
@@ -125,6 +129,10 @@ public class LiteCalc extends JFrame implements KeyListener {
             currentInput.setLength(0);
             equalsButtonClicked = false;
         }
+        if (text.equals(".") && currentInput.toString().contains(".")) {
+            // Do not allow multiple decimal points
+            return;
+        }
         if (text.equals(".") && currentInput.isEmpty()) {
             currentInput.append("0");
         } else if (text.equals(".") && !currentInput.isEmpty()) {
@@ -140,14 +148,20 @@ public class LiteCalc extends JFrame implements KeyListener {
         if (currentInput.toString().equals("0") && Character.isDigit(text.charAt(0))) {
             currentInput.setLength(0);
         }
+        // if user enters zero after dot ("."), add the zero
+        if (currentInput.length() > 1 && currentInput.charAt(currentInput.length() - 1) == '.' && currentInput.charAt(currentInput.length() - 2) != '0' && text.charAt(0) == '0') {
+            currentInput.append(text);
+        }
+
         // if user enter zero right after operator, then user enter another digit, remove the zero
-        if (currentInput.length() > 1 && !Character.isDigit(currentInput.charAt(currentInput.length() - 2)) && currentInput.charAt(currentInput.length() - 1) == '0' && Character.isDigit(text.charAt(0))) {
+        if (currentInput.length() > 1 && !(currentInput.charAt(currentInput.length() - 2) == '.') && !Character.isDigit(currentInput.charAt(currentInput.length() - 2)) && currentInput.charAt(currentInput.length() - 1) == '0' && Character.isDigit(text.charAt(0))) {
             currentInput.deleteCharAt(currentInput.length() - 1);
         }
 
         currentInput.append(text);
         display.setText(currentInput.toString());
     }
+
     // Implementasi metode-metode dari KeyListener
     @Override
     public void keyTyped(KeyEvent e) {
@@ -209,7 +223,15 @@ public class LiteCalc extends JFrame implements KeyListener {
             calculateResult();
             equalsButtonClicked = true;
         } else {
-            processOperator(buttonText);
+            Pattern pattern = Pattern.compile(DIVIDE_BY_ZERO_LINE);
+            Matcher matcher = pattern.matcher(currentInput.toString());
+            System.out.println(currentInput.toString());
+            if (matcher.matches()) {
+                System.out.println("division by zero");
+                handleDivideByZero();
+            } else {
+                processOperator(buttonText);
+            }
         }
     }
 
