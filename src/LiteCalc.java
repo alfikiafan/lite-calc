@@ -31,6 +31,7 @@ public class LiteCalc extends JFrame implements KeyListener {
     private static final int BUTTONS_PER_ROW = 4;
 
     private boolean equalsButtonClicked = false;
+    boolean isSecondOperand;
 
     public LiteCalc() {
         setTitle("LiteCalc");
@@ -129,8 +130,7 @@ public class LiteCalc extends JFrame implements KeyListener {
             currentInput.setLength(0);
             equalsButtonClicked = false;
         }
-        if (text.equals(".") && currentInput.toString().contains(".")) {
-            // Do not allow multiple decimal points
+        if (text.equals(".") && !currentInput.isEmpty() && currentInput.charAt(currentInput.length() - 1) == '.') {
             return;
         }
         if (text.equals(".") && currentInput.isEmpty()) {
@@ -315,14 +315,14 @@ public class LiteCalc extends JFrame implements KeyListener {
     private void toggleSign() {
         if (!currentInput.isEmpty()) {
             if (currentOperator == null) {
-                // Jika tidak ada operator, ubah tanda pada bilangan utama
+                // If there is no operator, toggle the sign of the first operand
                 if (currentInput.charAt(0) == '-') {
                     currentInput.deleteCharAt(0);
                 } else {
                     currentInput.insert(0, '-');
                 }
             } else {
-                // Jika ada operator, ubah tanda pada operand kedua jika ada
+                // If there is an operator, toggle the sign of the second operand
                 String[] expression = currentInput.toString().split("\\s+");
                 if (expression.length == 3) {
                     String secondOperand = expression[2];
@@ -339,11 +339,12 @@ public class LiteCalc extends JFrame implements KeyListener {
                     }
                     currentInput.deleteCharAt(currentInput.length() - 1); // Remove trailing space
                 }
+                // Toggle the flag only if it's the first time toggleSign is called
+                isSecondOperand = !isSecondOperand;
             }
             display.setText(currentInput.toString());
         }
     }
-
     private void calculateResult() {
         if (currentOperator != null) {
             String[] expression = currentInput.toString().split("\\s+");
